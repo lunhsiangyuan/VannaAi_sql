@@ -253,4 +253,4 @@ if __name__ == '__main__':
         app.run(host='0.0.0.0', port=port, debug=False)
     except Exception as e:
         logger.error(f"應用程式啟動失敗: {str(e)}")
-        logger.error(traceback.format_exc()) 
+        logger.error(traceback.format_exc())

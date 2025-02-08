@@ -19,7 +19,6 @@ build/
 .vscode/
 *.swp
 *~
-# ... 既有的內容 ...
 
 # 資料庫相關
 database/*.csv
