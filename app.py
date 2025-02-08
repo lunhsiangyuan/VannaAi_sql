@@ -83,7 +83,7 @@ def train_data():
         
         # 訓練業務術語
         try:
-            with open('pretrain/business_terms.md', 'r', encoding='utf-8') as f:
+            with open('pre-train/business_terms.md', 'r', encoding='utf-8') as f:
                 terms = f.read()
                 logger.info("訓練業務術語...")
                 vn.train(documentation=terms)
@@ -92,7 +92,7 @@ def train_data():
         
         # 訓練範例查詢
         try:
-            with open('pretrain/example_queries.sql', 'r', encoding='utf-8') as f:
+            with open('pre-train/example_queries.sql', 'r', encoding='utf-8') as f:
                 queries = f.read().split(';')
                 logger.info("訓練範例查詢...")
                 for query in queries:

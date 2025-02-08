@@ -31,9 +31,10 @@ def validate_sql(sql: str) -> Tuple[bool, str]:
         
         stmt = parsed[0]
         
-        # 檢查是否為 SELECT 語句
-        if stmt.get_type().upper() != 'SELECT':
-            return False, "只允許 SELECT 查詢"
+        # 允許的查詢類型
+        allowed_types = ['SELECT', 'SHOW', 'DESCRIBE', 'EXPLAIN']
+        if stmt.get_type().upper() not in allowed_types:
+            return False, f"只允許 {', '.join(allowed_types)} 查詢"
         
         # 檢查是否包含危險關鍵字
         dangerous_keywords = ['DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER', 'TRUNCATE', 'CREATE']
@@ -44,14 +45,11 @@ def validate_sql(sql: str) -> Tuple[bool, str]:
         
         # 檢查表格名稱
         tables = extract_tables(sql)
-        if not tables:
-            return False, "無法識別查詢的表格"
-            
-        for table in tables:
-            if table.lower() not in ALLOWED_TABLES:
-                return False, f"不允許查詢表格: {table}"
+        if tables:  # 只有當查詢涉及表格時才檢查
+            for table in tables:
+                if table.lower() not in ALLOWED_TABLES:
+                    return False, f"不允許查詢表格: {table}"
         
-        # 不再檢查欄位名稱，允許使用別名和計算欄位
         return True, "SQL 查詢有效"
     
     except Exception as e:

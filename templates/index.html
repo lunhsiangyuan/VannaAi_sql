@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>SQL 查詢系統</title>
+    <title>VannaAI SQL 助手</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -18,264 +18,187 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        h1, h2 {
+        h1 {
             color: #333;
-            margin-bottom: 20px;
-        }
-        form {
+            text-align: center;
             margin-bottom: 30px;
+        }
+        .query-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
         }
         textarea, input[type="text"] {
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 16px;
-            margin-bottom: 10px;
+            box-sizing: border-box;
+            font-size: 14px;
         }
         textarea {
             height: 100px;
-            font-family: monospace;
+            resize: vertical;
         }
         button {
-            padding: 10px 20px;
-            background-color: #007bff;
+            background-color: #4CAF50;
             color: white;
+            padding: 10px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 14px;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: #45a049;
         }
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-        .results {
+        .result {
             margin-top: 20px;
-        }
-        .sql-query {
-            background-color: #f8f9fa;
             padding: 15px;
+            background-color: #f8f8f8;
             border-radius: 4px;
-            font-family: monospace;
-            margin-bottom: 20px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
-            overflow-x: auto;
-            display: block;
+            margin-top: 10px;
         }
         th, td {
-            padding: 12px;
+            padding: 8px;
             text-align: left;
-            border-bottom: 1px solid #ddd;
-            min-width: 100px;
+            border: 1px solid #ddd;
         }
         th {
-            background-color: #007bff;
+            background-color: #4CAF50;
             color: white;
-            position: sticky;
-            top: 0;
         }
         tr:nth-child(even) {
-            background-color: #f8f9fa;
+            background-color: #f2f2f2;
         }
         .error {
-            color: #dc3545;
+            color: #ff0000;
             padding: 10px;
-            background-color: #f8d7da;
+            background-color: #ffe6e6;
             border-radius: 4px;
-            margin: 10px 0;
-            word-wrap: break-word;
-        }
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 20px 0;
-            padding: 20px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-        }
-        .loading::after {
-            content: "⏳";
-            animation: loading 1s infinite;
-        }
-        @keyframes loading {
-            0% { content: "⏳"; }
-            50% { content: "⌛"; }
-            100% { content: "⏳"; }
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>SQL 查詢系統</h1>
-
-        <div class="loading" id="loading">
-            正在處理查詢...
+        <h1>VannaAI SQL 助手</h1>
+        
+        <!-- 自然語言查詢區塊 -->
+        <div class="query-section">
+            <h2>自然語言查詢</h2>
+            <form id="nlQueryForm" action="/api/nl-query" method="POST">
+                <div class="form-group">
+                    <label for="question">請輸入您的問題：</label>
+                    <input type="text" id="question" name="question" placeholder="例如：最近一週的銷售總額是多少？" required>
+                </div>
+                <button type="submit">查詢</button>
+            </form>
         </div>
 
-        <div class="results" id="results"></div>
+        <!-- SQL 查詢區塊 -->
+        <div class="query-section">
+            <h2>SQL 查詢</h2>
+            <form id="sqlQueryForm" action="/api/raw-sql" method="POST">
+                <div class="form-group">
+                    <label for="sql">SQL 查詢：</label>
+                    <textarea id="sql" name="sql" placeholder="輸入 SQL 查詢語句..." required></textarea>
+                </div>
+                <button type="submit">執行</button>
+            </form>
+        </div>
 
-        <h2>直接 SQL 查詢</h2>
-        <form id="rawSqlForm">
-            <textarea 
-                name="sql" 
-                placeholder="輸入 SQL 查詢..."
-                required></textarea>
-            <button type="submit" id="rawSqlSubmit">執行查詢</button>
-        </form>
-
-        <h2>自然語言查詢</h2>
-        <form id="nlQueryForm">
-            <input 
-                type="text" 
-                name="question" 
-                placeholder="例如：顯示最近一周的銷售額"
-                required>
-            <button type="submit" id="nlQuerySubmit">執行查詢</button>
-        </form>
+        <!-- 結果顯示區域 -->
+        <div id="result" class="result" style="display: none;">
+            <h3>查詢結果</h3>
+            <div id="resultContent"></div>
+        </div>
     </div>
 
     <script>
-        const resultDiv = document.getElementById('results');
-        const loading = document.getElementById('loading');
-        const rawSqlForm = document.getElementById('rawSqlForm');
-        const nlQueryForm = document.getElementById('nlQueryForm');
-        const rawSqlSubmit = document.getElementById('rawSqlSubmit');
-        const nlQuerySubmit = document.getElementById('nlQuerySubmit');
+        // 處理表單提交
+        document.getElementById('nlQueryForm').addEventListener('submit', handleSubmit);
+        document.getElementById('sqlQueryForm').addEventListener('submit', handleSubmit);
 
-        function disableButtons(disabled) {
-            rawSqlSubmit.disabled = disabled;
-            nlQuerySubmit.disabled = disabled;
-        }
-
-        function showLoading(show) {
-            loading.style.display = show ? 'block' : 'none';
-            disableButtons(show);
-        }
-
-        function showError(message, details = null) {
-            console.error('Error:', message, details);
-            const cleanMessage = message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            let errorHtml = `<div class="error">錯誤：${cleanMessage}</div>`;
-            if (details && typeof details === 'string') {
-                const cleanDetails = details.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                errorHtml += `<div class="error">詳細資訊：${cleanDetails}</div>`;
-            }
-            resultDiv.innerHTML = errorHtml;
-        }
-
-        function showResults(data) {
-            let html = '';
-            
-            if (data.sql) {
-                html += `
-                    <h3>執行的 SQL 查詢：</h3>
-                    <div class="sql-query">${data.sql}</div>
-                `;
-            }
-
-            if (data.results) {
-                if (Array.isArray(data.results) && data.results.length > 0) {
-                    const columns = Object.keys(data.results[0]);
-                    html += `
-                        <h3>查詢結果：</h3>
-                        <table>
-                            <thead>
-                                <tr>${columns.map(col => `<th>${col}</th>`).join('')}</tr>
-                            </thead>
-                            <tbody>
-                                ${data.results.map(row => `
-                                    <tr>${columns.map(col => `<td>${
-                                        row[col] === null ? 'NULL' :
-                                        typeof row[col] === 'object' ? JSON.stringify(row[col]) :
-                                        String(row[col])
-                                    }</td>`).join('')}</tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    `;
-                } else if (typeof data.results === 'object' && 'affected_rows' in data.results) {
-                    html += `<h3>執行結果：</h3><p>影響的資料筆數：${data.results.affected_rows}</p>`;
-                } else {
-                    html += '<p>沒有找到符合條件的結果</p>';
-                }
-            }
-
-            resultDiv.innerHTML = html;
-        }
-
-        async function handleRequest(url, data) {
-            showLoading(true);
-            resultDiv.innerHTML = '';
-            
-            try {
-                console.log('Sending request to:', url, 'with data:', data);
-                
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
-                
-                console.log('Response status:', response.status);
-                const contentType = response.headers.get('content-type');
-                console.log('Response content-type:', contentType);
-                
-                if (!contentType || !contentType.includes('application/json')) {
-                    throw new Error('伺服器回應格式錯誤');
-                }
-                
-                const responseData = await response.json();
-                console.log('Response data:', responseData);
-                
-                if (!response.ok) {
-                    throw new Error(responseData.error || `HTTP 錯誤: ${response.status}`);
-                }
-                
-                showResults(responseData);
-            } catch (error) {
-                console.error('Request failed:', error);
-                showError(error.message);
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        rawSqlForm.addEventListener('submit', async (e) => {
+        function handleSubmit(e) {
             e.preventDefault();
-            const sql = e.target.sql.value.trim();
-            
-            if (!sql) {
-                showError('請輸入 SQL 查詢');
-                return;
-            }
-            
-            await handleRequest('/api/raw-sql', {sql: sql});
-        });
+            const form = e.target;
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => data[key] = value);
 
-        nlQueryForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const question = e.target.question.value.trim();
-            
-            if (!question) {
-                showError('請輸入查詢問題');
-                return;
-            }
-            
-            await handleRequest('/api/nl-query', {question: question});
-        });
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('result');
+                const resultContent = document.getElementById('resultContent');
+                resultDiv.style.display = 'block';
+
+                if (data.error) {
+                    resultContent.innerHTML = `<div class="error">${data.error}</div>`;
+                    return;
+                }
+
+                let html = '';
+                if (data.sql) {
+                    html += `<h4>生成的 SQL：</h4><pre>${data.sql}</pre>`;
+                }
+                
+                if (data.results) {
+                    if (Array.isArray(data.results)) {
+                        if (data.results.length > 0) {
+                            const columns = Object.keys(data.results[0]);
+                            html += '<table><tr>';
+                            columns.forEach(col => html += `<th>${col}</th>`);
+                            html += '</tr>';
+                            data.results.forEach(row => {
+                                html += '<tr>';
+                                columns.forEach(col => html += `<td>${row[col]}</td>`);
+                                html += '</tr>';
+                            });
+                            html += '</table>';
+                        } else {
+                            html += '<p>查詢結果為空</p>';
+                        }
+                    } else {
+                        html += `<pre>${JSON.stringify(data.results, null, 2)}</pre>`;
+                    }
+                }
+
+                resultContent.innerHTML = html;
+            })
+            .catch(error => {
+                const resultDiv = document.getElementById('result');
+                const resultContent = document.getElementById('resultContent');
+                resultDiv.style.display = 'block';
+                resultContent.innerHTML = `<div class="error">請求失敗：${error.message}</div>`;
+            });
+        }
     </script>
 </body>
 </html> 
