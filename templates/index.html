@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SQL 查詢系統</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        form {
+            margin-bottom: 30px;
+        }
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        textarea {
+            height: 100px;
+            font-family: monospace;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .sql-query {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            overflow-x: auto;
+            display: block;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            min-width: 100px;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .error {
+            color: #dc3545;
+            padding: 10px;
+            background-color: #f8d7da;
+            border-radius: 4px;
+            margin: 10px 0;
+            word-wrap: break-word;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .loading::after {
+            content: "⏳";
+            animation: loading 1s infinite;
+        }
+        @keyframes loading {
+            0% { content: "⏳"; }
+            50% { content: "⌛"; }
+            100% { content: "⏳"; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SQL 查詢系統</h1>
+
+        <div class="loading" id="loading">
+            正在處理查詢...
+        </div>
+
+        <div class="results" id="results"></div>
+
+        <h2>直接 SQL 查詢</h2>
+        <form id="rawSqlForm">
+            <textarea 
+                name="sql" 
+                placeholder="輸入 SQL 查詢..."
+                required></textarea>
+            <button type="submit" id="rawSqlSubmit">執行查詢</button>
+        </form>
+
+        <h2>自然語言查詢</h2>
+        <form id="nlQueryForm">
+            <input 
+                type="text" 
+                name="question" 
+                placeholder="例如：顯示最近一周的銷售額"
+                required>
+            <button type="submit" id="nlQuerySubmit">執行查詢</button>
+        </form>
+    </div>
+
+    <script>
+        const resultDiv = document.getElementById('results');
+        const loading = document.getElementById('loading');
+        const rawSqlForm = document.getElementById('rawSqlForm');
+        const nlQueryForm = document.getElementById('nlQueryForm');
+        const rawSqlSubmit = document.getElementById('rawSqlSubmit');
+        const nlQuerySubmit = document.getElementById('nlQuerySubmit');
+
+        function disableButtons(disabled) {
+            rawSqlSubmit.disabled = disabled;
+            nlQuerySubmit.disabled = disabled;
+        }
+
+        function showLoading(show) {
+            loading.style.display = show ? 'block' : 'none';
+            disableButtons(show);
+        }
+
+        function showError(message, details = null) {
+            console.error('Error:', message, details);
+            const cleanMessage = message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            let errorHtml = `<div class="error">錯誤：${cleanMessage}</div>`;
+            if (details && typeof details === 'string') {
+                const cleanDetails = details.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                errorHtml += `<div class="error">詳細資訊：${cleanDetails}</div>`;
+            }
+            resultDiv.innerHTML = errorHtml;
+        }
+
+        function showResults(data) {
+            let html = '';
+            
+            if (data.sql) {
+                html += `
+                    <h3>執行的 SQL 查詢：</h3>
+                    <div class="sql-query">${data.sql}</div>
+                `;
+            }
+
+            if (data.results) {
+                if (Array.isArray(data.results) && data.results.length > 0) {
+                    const columns = Object.keys(data.results[0]);
+                    html += `
+                        <h3>查詢結果：</h3>
+                        <table>
+                            <thead>
+                                <tr>${columns.map(col => `<th>${col}</th>`).join('')}</tr>
+                            </thead>
+                            <tbody>
+                                ${data.results.map(row => `
+                                    <tr>${columns.map(col => `<td>${
+                                        row[col] === null ? 'NULL' :
+                                        typeof row[col] === 'object' ? JSON.stringify(row[col]) :
+                                        String(row[col])
+                                    }</td>`).join('')}</tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } else if (typeof data.results === 'object' && 'affected_rows' in data.results) {
+                    html += `<h3>執行結果：</h3><p>影響的資料筆數：${data.results.affected_rows}</p>`;
+                } else {
+                    html += '<p>沒有找到符合條件的結果</p>';
+                }
+            }
+
+            resultDiv.innerHTML = html;
+        }
+
+        async function handleRequest(url, data) {
+            showLoading(true);
+            resultDiv.innerHTML = '';
+            
+            try {
+                console.log('Sending request to:', url, 'with data:', data);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                console.log('Response status:', response.status);
+                const contentType = response.headers.get('content-type');
+                console.log('Response content-type:', contentType);
+                
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('伺服器回應格式錯誤');
+                }
+                
+                const responseData = await response.json();
+                console.log('Response data:', responseData);
+                
+                if (!response.ok) {
+                    throw new Error(responseData.error || `HTTP 錯誤: ${response.status}`);
+                }
+                
+                showResults(responseData);
+            } catch (error) {
+                console.error('Request failed:', error);
+                showError(error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        rawSqlForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const sql = e.target.sql.value.trim();
+            
+            if (!sql) {
+                showError('請輸入 SQL 查詢');
+                return;
+            }
+            
+            await handleRequest('/api/raw-sql', {sql: sql});
+        });
+
+        nlQueryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const question = e.target.question.value.trim();
+            
+            if (!question) {
+                showError('請輸入查詢問題');
+                return;
+            }
+            
+            await handleRequest('/api/nl-query', {question: question});
+        });
+    </script>
+</body>
+</html> 

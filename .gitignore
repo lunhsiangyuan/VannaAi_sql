@@ -1,0 +1,30 @@
+venv/
+env/
+*.pyc
+__pycache__/
+.env
+.DS_Store
+sales_data.db
+*.db
+*.sqlite3
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.tox/
+.idea/
+.vscode/
+*.swp
+*~
+# ... 既有的內容 ...
+
+# 資料庫相關
+database/*.csv
+database/*.db
+database/*.sqlite3
+
+# 暫存資料夾
+deprecated_files/
